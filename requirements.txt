@@ -1,3 +1,4 @@
 python-telegram-bot==13.7
 environs==9.3.4
 redis==3.5.3
+requests==2.26.0
