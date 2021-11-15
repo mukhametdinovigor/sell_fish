@@ -1,3 +1,4 @@
+import copy
 import logging
 
 from environs import Env
@@ -6,19 +7,32 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Filters, Updater
 from telegram.ext import CallbackQueryHandler, CommandHandler, MessageHandler
 
-from moltin_api import get_access_token, get_available_products
+from moltin_api import get_access_token, get_available_products, get_product_titles_and_ids
 
 env = Env()
 env.read_env()
 _database = None
 
 
+def generate_inline_buttons():
+    inline_buttons = []
+    row_buttons = []
+    access_token = get_access_token()
+    available_products = get_available_products(access_token)
+    product_titles_and_ids = get_product_titles_and_ids(available_products)
+    for product, id in product_titles_and_ids.items():
+        row_buttons.append(InlineKeyboardButton(product, callback_data=id))
+        if len(row_buttons) == 2:
+            inline_buttons.append(copy.deepcopy(row_buttons))
+            row_buttons.clear()
+        else:
+            continue
+    inline_buttons.append(row_buttons)
+    return inline_buttons
+
+
 def start(update, context):
-    keyboard = [[InlineKeyboardButton("King Crab", callback_data='1'),
-                 InlineKeyboardButton("Coho Salmon", callback_data='2')],
-
-                [InlineKeyboardButton("Cod", callback_data='3')]]
-
+    keyboard = generate_inline_buttons()
     reply_markup = InlineKeyboardMarkup(keyboard)
     update.message.reply_text(text='Привет!', reply_markup=reply_markup)
     return "ECHO"
