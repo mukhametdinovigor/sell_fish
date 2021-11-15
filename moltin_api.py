@@ -53,6 +53,28 @@ def get_products_from_cart(access_token):
     return response.json()
 
 
+def get_product_by_id(access_token, product_id):
+    headers = {
+        'Authorization': f'Bearer {access_token}',
+    }
+    product_endpoint = f'https://api.moltin.com/v2/products/{product_id}'
+    response = requests.get(product_endpoint, headers=headers)
+    response.raise_for_status()
+    return response.json()
+
+
+def get_product_details(product):
+    product_details = [
+        product["data"]["name"],
+        f'{product["data"]["meta"]["display_price"]["with_tax"]["formatted"]} per kg\n'
+        f'{product["data"]["meta"]["stock"]["level"]}kg in stock',
+
+        product["data"]["description"]
+                       ]
+
+    return product_details
+
+
 def get_cart(access_token):
     headers = {
         'Authorization': f'Bearer {access_token}',
@@ -74,7 +96,7 @@ def main():
     available_products = get_available_products(access_token)
     product_id = 'f6bac3f3-b54d-4467-9567-240a0339b996'
     # pp.pprint(available_products)
-    pp.pprint(get_product_titles_and_ids(available_products))
+    # pp.pprint(get_product_titles_and_ids(available_products))
     # pp.pprint(add_product_to_cart(access_token, product_id))
     # pp.pprint(get_products_from_cart(access_token))
 

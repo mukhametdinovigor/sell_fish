@@ -7,18 +7,19 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Filters, Updater
 from telegram.ext import CallbackQueryHandler, CommandHandler, MessageHandler
 
-from moltin_api import get_access_token, get_available_products, get_product_titles_and_ids
+from moltin_api import get_access_token, get_available_products, get_product_titles_and_ids, get_product_by_id, get_product_details
 
 env = Env()
 env.read_env()
 _database = None
 
+ACCESS_TOKEN = get_access_token()
+
 
 def generate_inline_buttons():
     inline_buttons = []
     row_buttons = []
-    access_token = get_access_token()
-    available_products = get_available_products(access_token)
+    available_products = get_available_products(ACCESS_TOKEN)
     product_titles_and_ids = get_product_titles_and_ids(available_products)
     for product, id in product_titles_and_ids.items():
         row_buttons.append(InlineKeyboardButton(product, callback_data=id))
@@ -35,7 +36,15 @@ def start(update, context):
     keyboard = generate_inline_buttons()
     reply_markup = InlineKeyboardMarkup(keyboard)
     update.message.reply_text(text='Привет!', reply_markup=reply_markup)
-    return "ECHO"
+    return "HANDLE_MENU"
+
+
+def handle_menu(update, context):
+    product_id = update.callback_query.data
+    product = get_product_by_id(ACCESS_TOKEN, product_id)
+    product_details = '\n\n'.join(get_product_details(product))
+    update.callback_query.message.reply_text(text=product_details)
+    return "START"
 
 
 def echo(update, context):
@@ -78,7 +87,8 @@ def handle_users_reply(update, context):
 
     states_functions = {
         'START': start,
-        'ECHO': echo
+        'ECHO': echo,
+        'HANDLE_MENU': handle_menu
     }
     state_handler = states_functions[user_state]
     # Если вы вдруг не заметите, что python-telegram-bot перехватывает ошибки.
