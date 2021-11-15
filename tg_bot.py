@@ -6,16 +6,18 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Filters, Updater
 from telegram.ext import CallbackQueryHandler, CommandHandler, MessageHandler
 
+from moltin_api import get_access_token, get_available_products
+
 env = Env()
 env.read_env()
 _database = None
 
 
 def start(update, context):
-    keyboard = [[InlineKeyboardButton("Option 1", callback_data='1'),
-                 InlineKeyboardButton("Option 2", callback_data='2')],
+    keyboard = [[InlineKeyboardButton("King Crab", callback_data='1'),
+                 InlineKeyboardButton("Coho Salmon", callback_data='2')],
 
-                [InlineKeyboardButton("Option 3", callback_data='3')]]
+                [InlineKeyboardButton("Cod", callback_data='3')]]
 
     reply_markup = InlineKeyboardMarkup(keyboard)
     update.message.reply_text(text='Привет!', reply_markup=reply_markup)
