@@ -45,12 +45,27 @@ def add_product_to_cart(access_token, product_id, chat_id, quantity):
 
 
 def get_products_from_cart(access_token, chat_id):
+    products_from_cart = []
+    total_price = 0
+
     headers = {
         'Authorization': f'Bearer {access_token}',
     }
     response = requests.get(f'https://api.moltin.com/v2/carts/{chat_id}/items', headers=headers)
     response.raise_for_status()
-    return response.json()
+    products = response.json()
+
+    for product in products['data']:
+        product_amount = product['value']['amount'] / 100
+        total_price += product_amount
+        products_from_cart.append('\n'.join([product['name'],
+                                             product['description'],
+                                             f"${product['unit_price']['amount'] / 100} per kg",
+                                             f"${product['quantity']}kg in cart for ${product_amount}",
+                                             ]))
+        products_from_cart.append('\n')
+    products_from_cart.append(f"Total: ${total_price}")
+    return products_from_cart
 
 
 def get_product_by_id(access_token, product_id):
@@ -70,7 +85,7 @@ def get_product_details(product):
         f'{product["data"]["meta"]["stock"]["level"]}kg in stock',
 
         product["data"]["description"]
-                       ]
+    ]
     return product_details
 
 
