@@ -8,7 +8,7 @@ from telegram.ext import Filters, Updater
 from telegram.ext import CallbackQueryHandler, CommandHandler, MessageHandler
 
 from moltin_api import get_access_token, get_available_products, get_product_titles_and_ids, get_product_by_id, \
-    get_product_details, get_product_image_url
+    get_product_details, get_product_image_url, add_product_to_cart
 
 env = Env()
 env.read_env()
@@ -35,14 +35,18 @@ def generate_inline_buttons():
 
 def start(update, context):
     keyboard = generate_inline_buttons()
+    context.user_data['keyboard'] = keyboard
     reply_markup = InlineKeyboardMarkup(keyboard)
-    update.message.reply_text(text='Привет!', reply_markup=reply_markup)
+    update.message.reply_text(text='Вы можете выбрать товар:', reply_markup=reply_markup)
     return "HANDLE_MENU"
 
 
 def handle_menu(update, context):
-    reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton('Назад', callback_data='_')]])
+    reply_markup = InlineKeyboardMarkup([
+        [InlineKeyboardButton('1 кг', callback_data=1), InlineKeyboardButton('5 кг', callback_data=5), InlineKeyboardButton('10 кг', callback_data=10)],
+        [InlineKeyboardButton('Назад', callback_data='_')]])
     product_id = update.callback_query.data
+    context.user_data['product_id'] = product_id
     product = get_product_by_id(ACCESS_TOKEN, product_id)
     product_details = '\n\n'.join(get_product_details(product))
     image_id = product['data']['relationships']['main_image']['data']['id']
@@ -61,10 +65,16 @@ def handle_menu(update, context):
 
 
 def handle_description(update, context):
-    keyboard = generate_inline_buttons()
+    keyboard = context.user_data['keyboard']
     reply_markup = InlineKeyboardMarkup(keyboard)
-    update.callback_query.message.reply_text(text='Привет!', reply_markup=reply_markup)
-    return "HANDLE_MENU"
+    product_id = context.user_data['product_id']
+    if update.callback_query.data.isdigit():
+        quantity = int(update.callback_query.data)
+        add_product_to_cart(ACCESS_TOKEN, product_id, update.effective_chat.id, quantity)
+        return "HANDLE_DESCRIPTION"
+    else:
+        update.callback_query.message.reply_text(text='Вы можете выбрать товар:', reply_markup=reply_markup)
+        return "HANDLE_MENU"
 
 
 def handle_users_reply(update, context):

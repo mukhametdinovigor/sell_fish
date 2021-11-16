@@ -29,7 +29,7 @@ def get_available_products(access_token):
     return response.json()
 
 
-def add_product_to_cart(access_token, product_id):
+def add_product_to_cart(access_token, product_id, chat_id, quantity):
     headers = {
         'Authorization': f'Bearer {access_token}',
         'Content-Type': 'application/json',
@@ -37,18 +37,18 @@ def add_product_to_cart(access_token, product_id):
     payload = {"data":
                    {"id": product_id,
                     "type": "cart_item",
-                    "quantity": 1}
+                    "quantity": quantity}
                }
-    response = requests.post('https://api.moltin.com/v2/carts/1234/items', headers=headers, json=payload)
+    response = requests.post(f'https://api.moltin.com/v2/carts/{chat_id}/items', headers=headers, json=payload)
     response.raise_for_status()
     return response.json()
 
 
-def get_products_from_cart(access_token):
+def get_products_from_cart(access_token, chat_id):
     headers = {
         'Authorization': f'Bearer {access_token}',
     }
-    response = requests.get('https://api.moltin.com/v2/carts/1234/items', headers=headers)
+    response = requests.get(f'https://api.moltin.com/v2/carts/{chat_id}/items', headers=headers)
     response.raise_for_status()
     return response.json()
 
@@ -71,15 +71,14 @@ def get_product_details(product):
 
         product["data"]["description"]
                        ]
-
     return product_details
 
 
-def get_cart(access_token):
+def get_cart(access_token, chat_id):
     headers = {
         'Authorization': f'Bearer {access_token}',
     }
-    response = requests.get('https://api.moltin.com/v2/carts/1234', headers=headers)
+    response = requests.get(f'https://api.moltin.com/v2/carts/{chat_id}', headers=headers)
     response.raise_for_status()
     return response.json()
 
@@ -93,6 +92,15 @@ def get_product_image_url(access_token, image_id):
     return response.json()['data']['link']['href']
 
 
+def delete_cart(access_token, chat_id):
+    headers = {
+        'Authorization': f'Bearer {access_token}',
+    }
+    response = requests.delete(f'https://api.moltin.com/v2/carts/{chat_id}', headers=headers)
+    response.raise_for_status()
+    return response.text
+
+
 def get_product_titles_and_ids(products):
     product_titles_and_ids = dict()
     for product in products['data']:
@@ -104,10 +112,13 @@ def main():
     access_token = get_access_token()  # TODO сделать проверку кончился ли токен, живет 3600 сек
     available_products = get_available_products(access_token)
     product_id = 'f6bac3f3-b54d-4467-9567-240a0339b996'
+    chat_id = 287543165
     # pp.pprint(available_products)
     # pp.pprint(get_product_titles_and_ids(available_products))
     # pp.pprint(add_product_to_cart(access_token, product_id))
-    # pp.pprint(get_products_from_cart(access_token))
+    # pp.pprint(delete_cart(access_token))
+    # pp.pprint(get_products_from_cart(access_token, chat_id))
+    # pp.pprint(get_cart(access_token, chat_id))
 
 
 if __name__ == main():
