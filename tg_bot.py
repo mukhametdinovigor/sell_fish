@@ -41,6 +41,7 @@ def start(update, context):
 
 
 def handle_menu(update, context):
+    reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton('Назад', callback_data='_')]])
     product_id = update.callback_query.data
     product = get_product_by_id(ACCESS_TOKEN, product_id)
     product_details = '\n\n'.join(get_product_details(product))
@@ -50,38 +51,23 @@ def handle_menu(update, context):
         chat_id=update.effective_chat.id,
         photo=image_url,
         caption=product_details,
+        reply_markup=reply_markup
     )
     context.bot.delete_message(
         chat_id=update.effective_chat.id,
         message_id=update.callback_query.message.message_id
     )
-    return "START"
+    return "HANDLE_DESCRIPTION"
 
 
-def echo(update, context):
-    """
-    Хэндлер для состояния ECHO.
-    Бот отвечает пользователю тем же, что пользователь ему написал.
-    Оставляет пользователя в состоянии ECHO.
-    """
-    users_reply = update.message.text
-    update.message.reply_text(users_reply)
-    return "ECHO"
+def handle_description(update, context):
+    keyboard = generate_inline_buttons()
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    update.callback_query.message.reply_text(text='Привет!', reply_markup=reply_markup)
+    return "HANDLE_MENU"
 
 
 def handle_users_reply(update, context):
-    """
-    Функция, которая запускается при любом сообщении от пользователя и решает как его обработать.
-    Эта функция запускается в ответ на эти действия пользователя:
-        * Нажатие на inline-кнопку в боте
-        * Отправка сообщения боту
-        * Отправка команды боту
-    Она получает стейт пользователя из базы данных и запускает соответствующую функцию-обработчик (хэндлер).
-    Функция-обработчик возвращает следующее состояние, которое записывается в базу данных.
-    Если пользователь только начал пользоваться ботом, Telegram форсит его написать "/start",
-    поэтому по этой фразе выставляется стартовое состояние.
-    Если пользователь захочет начать общение с ботом заново, он также может воспользоваться этой командой.
-    """
     db = get_database_connection()
     if update.message:
         user_reply = update.message.text
@@ -98,13 +84,10 @@ def handle_users_reply(update, context):
 
     states_functions = {
         'START': start,
-        'ECHO': echo,
-        'HANDLE_MENU': handle_menu
+        'HANDLE_MENU': handle_menu,
+        'HANDLE_DESCRIPTION': handle_description,
     }
     state_handler = states_functions[user_state]
-    # Если вы вдруг не заметите, что python-telegram-bot перехватывает ошибки.
-    # Оставляю этот try...except, чтобы код не падал молча.
-    # Этот фрагмент можно переписать.
     try:
         next_state = state_handler(update, context)
         db.set(chat_id, next_state)
@@ -113,9 +96,6 @@ def handle_users_reply(update, context):
 
 
 def get_database_connection():
-    """
-    Возвращает конекшн с базой данных Redis, либо создаёт новый, если он ещё не создан.
-    """
     global _database
     if _database is None:
         database_password = env.str("REDIS_PASSWORD")
