@@ -84,6 +84,15 @@ def get_cart(access_token):
     return response.json()
 
 
+def get_product_image_url(access_token, image_id):
+    headers = {
+        'Authorization': f'Bearer {access_token}',
+    }
+    response = requests.get(f'https://api.moltin.com/v2/files/{image_id}', headers=headers)
+    response.raise_for_status()
+    return response.json()['data']['link']['href']
+
+
 def get_product_titles_and_ids(products):
     product_titles_and_ids = dict()
     for product in products['data']:

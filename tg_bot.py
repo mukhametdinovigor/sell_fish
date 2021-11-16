@@ -7,7 +7,8 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Filters, Updater
 from telegram.ext import CallbackQueryHandler, CommandHandler, MessageHandler
 
-from moltin_api import get_access_token, get_available_products, get_product_titles_and_ids, get_product_by_id, get_product_details
+from moltin_api import get_access_token, get_available_products, get_product_titles_and_ids, get_product_by_id, \
+    get_product_details, get_product_image_url
 
 env = Env()
 env.read_env()
@@ -21,9 +22,9 @@ def generate_inline_buttons():
     row_buttons = []
     available_products = get_available_products(ACCESS_TOKEN)
     product_titles_and_ids = get_product_titles_and_ids(available_products)
-    for product, id in product_titles_and_ids.items():
-        row_buttons.append(InlineKeyboardButton(product, callback_data=id))
-        if len(row_buttons) == 2:
+    for product, product_id in product_titles_and_ids.items():
+        row_buttons.append(InlineKeyboardButton(product, callback_data=product_id))
+        if len(row_buttons) == 2:  # TODO вынести количество кнопок в отдельную переменную
             inline_buttons.append(copy.deepcopy(row_buttons))
             row_buttons.clear()
         else:
@@ -43,7 +44,17 @@ def handle_menu(update, context):
     product_id = update.callback_query.data
     product = get_product_by_id(ACCESS_TOKEN, product_id)
     product_details = '\n\n'.join(get_product_details(product))
-    update.callback_query.message.reply_text(text=product_details)
+    image_id = product['data']['relationships']['main_image']['data']['id']
+    image_url = get_product_image_url(ACCESS_TOKEN, image_id)
+    context.bot.send_photo(
+        chat_id=update.effective_chat.id,
+        photo=image_url,
+        caption=product_details,
+    )
+    context.bot.delete_message(
+        chat_id=update.effective_chat.id,
+        message_id=update.callback_query.message.message_id
+    )
     return "START"
 
 
