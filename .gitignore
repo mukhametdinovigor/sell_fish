@@ -153,3 +153,5 @@ cython_debug/
 /.idea/vcs.xml
 /.idea/where_to_go.iml
 /media/
+/.idea/inspectionProfiles/Project_Default.xml
+/.idea/sell_fish.iml
