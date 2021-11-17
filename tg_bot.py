@@ -8,7 +8,7 @@ from telegram.ext import Filters, Updater
 from telegram.ext import CallbackQueryHandler, CommandHandler, MessageHandler
 
 from moltin_api import get_access_token, get_available_products, get_product_titles_and_ids, get_product_by_id, \
-    get_product_details, get_product_image_url, add_product_to_cart, get_products_from_cart, delete_cart_items
+    get_product_details, get_product_image_url, add_product_to_cart, get_products_from_cart, delete_cart_items, delete_cart
 
 env = Env()
 env.read_env()
@@ -41,6 +41,7 @@ def display_card(update):
     for product_id, product_title in zip(product_ids, product_titles):
         keyboard.append([InlineKeyboardButton(f"Убрать из корзины {product_title}", callback_data=product_id)])
     keyboard.append([InlineKeyboardButton("В меню", callback_data='menu')])
+    keyboard.append([InlineKeyboardButton("Оплатить", callback_data='pay')])
     reply_markup = InlineKeyboardMarkup(keyboard)
     update.callback_query.message.reply_text(text='\n\n'.join(list(products_from_cart.values())), reply_markup=reply_markup)
 
@@ -50,8 +51,12 @@ def start(update, context):
     keyboard.append([InlineKeyboardButton('Корзина', callback_data='cart')])
     context.user_data['keyboard'] = keyboard
     reply_markup = InlineKeyboardMarkup(keyboard)
-    update.message.reply_text(text='Вы можете выбрать товар:', reply_markup=reply_markup)
-    return "HANDLE_MENU"
+    if update.callback_query:
+        update.callback_query.message.reply_text(text='Вы можете выбрать товар:', reply_markup=reply_markup)
+        return "HANDLE_MENU"
+    else:
+        update.message.reply_text(text='Вы можете выбрать товар:', reply_markup=reply_markup)
+        return "HANDLE_MENU"
 
 
 def handle_menu(update, context):
@@ -108,6 +113,18 @@ def handle_cart(update, context):
         return 'HANDLE_CART'
 
 
+def waiting_email(update, context):
+    if update.message:
+        reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton('Заново', callback_data='again')]])
+        delete_cart(ACCESS_TOKEN, update.effective_chat.id)
+        update.message.reply_text(text=f'Вы прислали эту почту: {update.message.text}', reply_markup=reply_markup)
+        return "START"
+
+    else:
+        update.callback_query.message.reply_text(text='Для оформления заказа, отправьте свою почту')
+        return "WAITING_EMAIL"
+
+
 def handle_users_reply(update, context):
     db = get_database_connection()
     if update.message:
@@ -122,6 +139,8 @@ def handle_users_reply(update, context):
         user_state = 'START'
     elif user_reply == 'cart':
         user_state = 'HANDLE_CART'
+    elif user_reply == 'pay':
+        user_state = 'WAITING_EMAIL'
 
     else:
         user_state = db.get(chat_id).decode("utf-8")
@@ -131,6 +150,7 @@ def handle_users_reply(update, context):
         'HANDLE_MENU': handle_menu,
         'HANDLE_DESCRIPTION': handle_description,
         'HANDLE_CART': handle_cart,
+        'WAITING_EMAIL': waiting_email,
     }
     state_handler = states_functions[user_state]
     try:
