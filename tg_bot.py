@@ -8,7 +8,8 @@ from telegram.ext import Filters, Updater
 from telegram.ext import CallbackQueryHandler, CommandHandler, MessageHandler
 
 from moltin_api import get_access_token, get_available_products, get_product_titles_and_ids, get_product_by_id, \
-    get_product_details, get_product_image_url, add_product_to_cart, get_products_from_cart, delete_cart_items, delete_cart
+    get_product_details, get_product_image_url, add_product_to_cart, get_products_from_cart, delete_cart_items, delete_cart,\
+    create_customer
 
 env = Env()
 env.read_env()
@@ -116,6 +117,12 @@ def handle_cart(update, context):
 def waiting_email(update, context):
     if update.message:
         reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton('Заново', callback_data='again')]])
+        try:
+            create_customer(ACCESS_TOKEN, update.message.text)
+        except Exception as err:
+            if '422 Client Error' in str(err):
+                update.message.reply_text(text='Неверная почта, попробуйте ещё раз')
+                return "WAITING_EMAIL"
         delete_cart(ACCESS_TOKEN, update.effective_chat.id)
         update.message.reply_text(text=f'Вы прислали эту почту: {update.message.text}', reply_markup=reply_markup)
         return "START"

@@ -124,6 +124,22 @@ def delete_cart_items(access_token, chat_id, product_id):
     return response.text
 
 
+def create_customer(access_token, email):
+    headers = {
+        'Authorization': f'Bearer {access_token}',
+        'Content-Type': 'application/json',
+    }
+    payload = {"data":
+                   {"type": "customer",
+                    "name": email,
+                    "email": email
+                    }
+               }
+    response = requests.post('https://api.moltin.com/v2/customers', headers=headers, json=payload)
+    response.raise_for_status()
+    return response.json()
+
+
 def get_product_titles_and_ids(products):
     product_titles_and_ids = dict()
     for product in products['data']:
@@ -133,7 +149,7 @@ def get_product_titles_and_ids(products):
 
 def main():
     access_token = get_access_token()  # TODO сделать проверку кончился ли токен, живет 3600 сек
-    available_products = get_available_products(access_token)
+    # available_products = get_available_products(access_token)
     product_id = 'f6bac3f3-b54d-4467-9567-240a0339b996'
     chat_id = 287543165
     # pp.pprint(available_products)
@@ -142,6 +158,7 @@ def main():
     # pp.pprint(delete_cart(access_token))
     # pp.pprint(get_products_from_cart(access_token, chat_id))
     # pp.pprint(get_cart(access_token, chat_id))
+    # pp.pprint(create_customer(access_token, 'asdasd@sdfsdf.com'))
 
 
 if __name__ == main():
