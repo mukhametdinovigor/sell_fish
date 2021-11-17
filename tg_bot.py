@@ -8,7 +8,7 @@ from telegram.ext import Filters, Updater
 from telegram.ext import CallbackQueryHandler, CommandHandler, MessageHandler
 
 from moltin_api import get_access_token, get_available_products, get_product_titles_and_ids, get_product_by_id, \
-    get_product_details, get_product_image_url, add_product_to_cart, get_products_from_cart
+    get_product_details, get_product_image_url, add_product_to_cart, get_products_from_cart, delete_cart_items
 
 env = Env()
 env.read_env()
@@ -31,6 +31,18 @@ def generate_inline_buttons():
             continue
     inline_buttons.append(row_buttons)
     return inline_buttons
+
+
+def display_card(update):
+    keyboard = []
+    products_from_cart = get_products_from_cart(ACCESS_TOKEN, update.effective_chat.id)
+    product_ids = list(products_from_cart.keys())[:-1]
+    product_titles = [product.split('\n')[0] for product in list(products_from_cart.values())[:-1]]
+    for product_id, product_title in zip(product_ids, product_titles):
+        keyboard.append([InlineKeyboardButton(f"Убрать из корзины {product_title}", callback_data=product_id)])
+    keyboard.append([InlineKeyboardButton("В меню", callback_data='menu')])
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    update.callback_query.message.reply_text(text='\n\n'.join(list(products_from_cart.values())), reply_markup=reply_markup)
 
 
 def start(update, context):
@@ -82,9 +94,18 @@ def handle_description(update, context):
 
 
 def handle_cart(update, context):
-    products_from_cart = get_products_from_cart(ACCESS_TOKEN, update.effective_chat.id)
-    update.callback_query.message.reply_text(text='\n'.join(products_from_cart))
-    return "HANDLE_MENU"
+    if update.callback_query.data == 'menu':
+        keyboard = context.user_data['keyboard']
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        update.callback_query.message.reply_text(text='Вы можете выбрать товар:', reply_markup=reply_markup)
+        return "HANDLE_MENU"
+    elif update.callback_query.data == 'cart':
+        display_card(update)
+        return 'HANDLE_CART'
+    else:
+        delete_cart_items(ACCESS_TOKEN, update.effective_chat.id, update.callback_query.data)
+        display_card(update)
+        return 'HANDLE_CART'
 
 
 def handle_users_reply(update, context):

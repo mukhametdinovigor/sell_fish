@@ -45,7 +45,7 @@ def add_product_to_cart(access_token, product_id, chat_id, quantity):
 
 
 def get_products_from_cart(access_token, chat_id):
-    products_from_cart = []
+    products_from_cart = dict()
     total_price = 0
 
     headers = {
@@ -58,13 +58,12 @@ def get_products_from_cart(access_token, chat_id):
     for product in products['data']:
         product_amount = product['value']['amount'] / 100
         total_price += product_amount
-        products_from_cart.append('\n'.join([product['name'],
-                                             product['description'],
-                                             f"${product['unit_price']['amount'] / 100} per kg",
-                                             f"${product['quantity']}kg in cart for ${product_amount}",
-                                             ]))
-        products_from_cart.append('\n')
-    products_from_cart.append(f"Total: ${total_price}")
+        products_from_cart[product['id']] = '\n'.join([product['name'],
+                                                       product['description'],
+                                                       f"${product['unit_price']['amount'] / 100} per kg",
+                                                       f"${product['quantity']}kg in cart for ${product_amount}",
+                                                       ])
+    products_from_cart['total'] = f"Total: ${total_price}"
     return products_from_cart
 
 
@@ -112,6 +111,15 @@ def delete_cart(access_token, chat_id):
         'Authorization': f'Bearer {access_token}',
     }
     response = requests.delete(f'https://api.moltin.com/v2/carts/{chat_id}', headers=headers)
+    response.raise_for_status()
+    return response.text
+
+
+def delete_cart_items(access_token, chat_id, product_id):
+    headers = {
+        'Authorization': f'Bearer {access_token}',
+    }
+    response = requests.delete(f'https://api.moltin.com/v2/carts/{chat_id}/items/{product_id}', headers=headers)
     response.raise_for_status()
     return response.text
 
