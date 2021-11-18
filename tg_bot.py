@@ -10,7 +10,10 @@ from telegram.ext import CallbackQueryHandler, CommandHandler, MessageHandler
 from moltin_api import get_access_token, get_available_products, get_product_titles_and_ids, get_product_by_id, \
     get_product_details, get_product_image_url, add_product_to_cart, get_products_from_cart, delete_cart_items, delete_cart,\
     create_customer
+from tg_logs_handler import TelegramLogsHandler
 
+
+logger = logging.getLogger('Logger')
 env = Env()
 env.read_env()
 _database = None
@@ -178,8 +181,12 @@ def get_database_connection():
 
 
 if __name__ == '__main__':
+    chat_id = env.str('CHAT_ID')
     token = env.str("TG_TOKEN")
     updater = Updater(token)
+    logger.setLevel(logging.WARNING)
+    logger.addHandler(TelegramLogsHandler(chat_id))
+    logger.warning('TG_Quiz_Bot запущен.')
     dispatcher = updater.dispatcher
     dispatcher.add_handler(CallbackQueryHandler(handle_users_reply))
     dispatcher.add_handler(MessageHandler(Filters.text, handle_users_reply))
