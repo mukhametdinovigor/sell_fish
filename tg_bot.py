@@ -1,17 +1,16 @@
 import copy
 import logging
 
-from environs import Env
 import redis
+from environs import Env
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Filters, Updater
 from telegram.ext import CallbackQueryHandler, CommandHandler, MessageHandler
+from telegram.ext import Filters, Updater
 
 from moltin_api import get_access_token, get_available_products, get_product_titles_and_ids, get_product_by_id, \
-    get_product_details, get_product_image_url, add_product_to_cart, get_products_from_cart, delete_cart_items, delete_cart,\
+    get_product_details, get_product_image_url, add_product_to_cart, get_products_from_cart, delete_cart_items, delete_cart, \
     create_customer
 from tg_logs_handler import TelegramLogsHandler
-
 
 logger = logging.getLogger('Logger')
 env = Env()
@@ -19,6 +18,7 @@ env.read_env()
 _database = None
 
 ACCESS_TOKEN = get_access_token()
+BUTTONS_IN_ROW = 2
 
 
 def generate_inline_buttons():
@@ -28,7 +28,7 @@ def generate_inline_buttons():
     product_titles_and_ids = get_product_titles_and_ids(available_products)
     for product, product_id in product_titles_and_ids.items():
         row_buttons.append(InlineKeyboardButton(product, callback_data=product_id))
-        if len(row_buttons) == 2:  # TODO вынести количество кнопок в отдельную переменную
+        if len(row_buttons) == BUTTONS_IN_ROW:
             inline_buttons.append(copy.deepcopy(row_buttons))
             row_buttons.clear()
         else:
@@ -186,7 +186,7 @@ if __name__ == '__main__':
     updater = Updater(token)
     logger.setLevel(logging.WARNING)
     logger.addHandler(TelegramLogsHandler(chat_id))
-    logger.warning('TG_Quiz_Bot запущен.')
+    logger.warning('TG_Fish_Bot запущен.')
     dispatcher = updater.dispatcher
     dispatcher.add_handler(CallbackQueryHandler(handle_users_reply))
     dispatcher.add_handler(MessageHandler(Filters.text, handle_users_reply))
