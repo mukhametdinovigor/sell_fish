@@ -17,14 +17,13 @@ env = Env()
 env.read_env()
 _database = None
 
-ACCESS_TOKEN = get_access_token()
 BUTTONS_IN_ROW = 2
 
 
 def generate_inline_buttons():
     inline_buttons = []
     row_buttons = []
-    available_products = get_available_products(ACCESS_TOKEN)
+    available_products = get_available_products()
     product_titles_and_ids = get_product_titles_and_ids(available_products)
     for product, product_id in product_titles_and_ids.items():
         row_buttons.append(InlineKeyboardButton(product, callback_data=product_id))
@@ -39,7 +38,7 @@ def generate_inline_buttons():
 
 def display_card(update):
     keyboard = []
-    products_from_cart = get_products_from_cart(ACCESS_TOKEN, update.effective_chat.id)
+    products_from_cart = get_products_from_cart(update.effective_chat.id)
     product_ids = list(products_from_cart.keys())[:-1]
     product_titles = [product.split('\n')[0] for product in list(products_from_cart.values())[:-1]]
     for product_id, product_title in zip(product_ids, product_titles):
@@ -72,10 +71,10 @@ def handle_menu(update, context):
 
     product_id = update.callback_query.data
     context.user_data['product_id'] = product_id
-    product = get_product_by_id(ACCESS_TOKEN, product_id)
+    product = get_product_by_id(product_id)
     product_details = get_product_details(product)
     image_id = product['data']['relationships']['main_image']['data']['id']
-    image_url = get_product_image_url(ACCESS_TOKEN, image_id)
+    image_url = get_product_image_url(image_id)
     context.bot.send_photo(
         chat_id=update.effective_chat.id,
         photo=image_url,
@@ -95,7 +94,7 @@ def handle_description(update, context):
     product_id = context.user_data['product_id']
     if update.callback_query.data.isdigit():
         quantity = int(update.callback_query.data)
-        add_product_to_cart(ACCESS_TOKEN, product_id, update.effective_chat.id, quantity)
+        add_product_to_cart(product_id, update.effective_chat.id, quantity)
         return "HANDLE_DESCRIPTION"
     else:
         update.callback_query.message.reply_text(text='Вы можете выбрать товар:', reply_markup=reply_markup)
@@ -112,7 +111,7 @@ def handle_cart(update, context):
         display_card(update)
         return 'HANDLE_CART'
     else:
-        delete_cart_items(ACCESS_TOKEN, update.effective_chat.id, update.callback_query.data)
+        delete_cart_items(update.effective_chat.id, update.callback_query.data)
         display_card(update)
         return 'HANDLE_CART'
 
@@ -121,12 +120,12 @@ def waiting_email(update, context):
     if update.message:
         reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton('Заново', callback_data='again')]])
         try:
-            create_customer(ACCESS_TOKEN, update.message.text)
+            create_customer(update.message.text)
         except Exception as err:
             if '422 Client Error' in str(err):
                 update.message.reply_text(text='Неверная почта, попробуйте ещё раз')
                 return "WAITING_EMAIL"
-        delete_cart(ACCESS_TOKEN, update.effective_chat.id)
+        delete_cart(update.effective_chat.id)
         update.message.reply_text(text=f'Вы прислали эту почту: {update.message.text}', reply_markup=reply_markup)
         return "START"
 
