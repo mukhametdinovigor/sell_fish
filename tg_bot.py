@@ -7,7 +7,7 @@ from telegram.ext import CallbackQueryHandler, CommandHandler, MessageHandler
 from telegram.ext import Filters, Updater
 
 from moltin_api import get_product_by_id, get_product_details, get_product_image_url, add_product_to_cart,\
-    delete_cart_items, delete_cart, create_customer
+    delete_cart_items, delete_cart, create_customer, WrongEmail
 from tg_lib import generate_inline_buttons, display_card
 from tg_logs_handler import TelegramLogsHandler
 
@@ -101,10 +101,9 @@ def waiting_email(update, context):
         reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton('Заново', callback_data='again')]])
         try:
             create_customer(update.message.text)
-        except Exception as err:
-            if '422 Client Error' in str(err):
-                update.message.reply_text(text='Неверная почта, попробуйте ещё раз')
-                return "WAITING_EMAIL"
+        except WrongEmail:
+            update.message.reply_text(text='Неверная почта, попробуйте ещё раз')
+            return "WAITING_EMAIL"
         delete_cart(update.effective_chat.id)
         update.message.reply_text(text=f'Вы прислали эту почту: {update.message.text}', reply_markup=reply_markup)
         return "START"

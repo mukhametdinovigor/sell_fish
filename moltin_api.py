@@ -5,6 +5,10 @@ env = Env()
 env.read_env()
 
 
+class WrongEmail(Exception):
+    pass
+
+
 def get_access_token():
     client_credentials = {
         'client_id': env.str('CLIENT_ID'),
@@ -143,7 +147,8 @@ def create_customer(email):
                     }
                }
     response = requests.post('https://api.moltin.com/v2/customers', headers=headers, json=payload)
-    response.raise_for_status()
+    if response.status_code == 422:
+        raise WrongEmail
     return response.json()
 
 
