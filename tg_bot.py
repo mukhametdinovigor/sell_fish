@@ -69,6 +69,7 @@ def handle_description(update, context):
     if update.callback_query.data.isdigit():
         quantity = int(update.callback_query.data)
         add_product_to_cart(product_id, update.effective_chat.id, quantity)
+        update.callback_query.answer(text='Товар добавлен в корзину')
         return "HANDLE_DESCRIPTION"
     elif update.callback_query.data == 'cart':
         display_card(update)
