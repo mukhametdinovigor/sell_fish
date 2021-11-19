@@ -7,9 +7,8 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import CallbackQueryHandler, CommandHandler, MessageHandler
 from telegram.ext import Filters, Updater
 
-from moltin_api import get_access_token, get_available_products, get_product_titles_and_ids, get_product_by_id, \
-    get_product_details, get_product_image_url, add_product_to_cart, get_products_from_cart, delete_cart_items, delete_cart, \
-    create_customer
+from moltin_api import get_available_products, get_product_titles_and_ids, get_product_by_id, get_product_details,\
+     get_product_image_url, add_product_to_cart, get_products_from_cart, delete_cart_items, delete_cart, create_customer
 from tg_logs_handler import TelegramLogsHandler
 
 logger = logging.getLogger('Logger')
@@ -63,29 +62,33 @@ def start(update, context):
 
 
 def handle_menu(update, context):
-    reply_markup = InlineKeyboardMarkup([
-        [InlineKeyboardButton('1 кг', callback_data=1), InlineKeyboardButton('5 кг', callback_data=5), InlineKeyboardButton('10 кг', callback_data=10)],
-        [InlineKeyboardButton('Назад', callback_data='_')],
-        [InlineKeyboardButton('Корзина', callback_data='cart')]
-    ])
+    if update.callback_query.data == 'cart':
+        display_card(update)
+        return 'HANDLE_CART'
+    else:
+        reply_markup = InlineKeyboardMarkup([
+            [InlineKeyboardButton('1 кг', callback_data=1), InlineKeyboardButton('5 кг', callback_data=5), InlineKeyboardButton('10 кг', callback_data=10)],
+            [InlineKeyboardButton('Назад', callback_data='_')],
+            [InlineKeyboardButton('Корзина', callback_data='cart')]
+        ])
 
-    product_id = update.callback_query.data
-    context.user_data['product_id'] = product_id
-    product = get_product_by_id(product_id)
-    product_details = get_product_details(product)
-    image_id = product['data']['relationships']['main_image']['data']['id']
-    image_url = get_product_image_url(image_id)
-    context.bot.send_photo(
-        chat_id=update.effective_chat.id,
-        photo=image_url,
-        caption='\n\n'.join(product_details),
-        reply_markup=reply_markup
-    )
-    context.bot.delete_message(
-        chat_id=update.effective_chat.id,
-        message_id=update.callback_query.message.message_id
-    )
-    return "HANDLE_DESCRIPTION"
+        product_id = update.callback_query.data
+        context.user_data['product_id'] = product_id
+        product = get_product_by_id(product_id)
+        product_details = get_product_details(product)
+        image_id = product['data']['relationships']['main_image']['data']['id']
+        image_url = get_product_image_url(image_id)
+        context.bot.send_photo(
+            chat_id=update.effective_chat.id,
+            photo=image_url,
+            caption='\n\n'.join(product_details),
+            reply_markup=reply_markup
+        )
+        context.bot.delete_message(
+            chat_id=update.effective_chat.id,
+            message_id=update.callback_query.message.message_id
+        )
+        return "HANDLE_DESCRIPTION"
 
 
 def handle_description(update, context):
@@ -96,6 +99,9 @@ def handle_description(update, context):
         quantity = int(update.callback_query.data)
         add_product_to_cart(product_id, update.effective_chat.id, quantity)
         return "HANDLE_DESCRIPTION"
+    elif update.callback_query.data == 'cart':
+        display_card(update)
+        return 'HANDLE_CART'
     else:
         update.callback_query.message.reply_text(text='Вы можете выбрать товар:', reply_markup=reply_markup)
         return "HANDLE_MENU"
@@ -110,6 +116,9 @@ def handle_cart(update, context):
     elif update.callback_query.data == 'cart':
         display_card(update)
         return 'HANDLE_CART'
+    elif update.callback_query.data == 'pay':
+        update.callback_query.message.reply_text(text='Для оформления заказа, отправьте свою почту')
+        return "WAITING_EMAIL"
     else:
         delete_cart_items(update.effective_chat.id, update.callback_query.data)
         display_card(update)
@@ -146,10 +155,6 @@ def handle_users_reply(update, context):
         return
     if user_reply == '/start':
         user_state = 'START'
-    elif user_reply == 'cart':
-        user_state = 'HANDLE_CART'
-    elif user_reply == 'pay':
-        user_state = 'WAITING_EMAIL'
 
     else:
         user_state = db.get(chat_id).decode("utf-8")
