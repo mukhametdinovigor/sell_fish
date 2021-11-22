@@ -7,8 +7,8 @@ from telegram.ext import CallbackQueryHandler, CommandHandler, MessageHandler
 from telegram.ext import Filters, Updater
 
 from moltin_api import get_product_by_id, get_product_details, get_product_image_url, add_product_to_cart,\
-    delete_cart_items, delete_cart, create_customer, WrongEmail
-from tg_lib import generate_inline_buttons, display_card
+    delete_cart_items, delete_cart, create_customer, get_access_token, WrongEmail
+from tg_lib import generate_inline_buttons, display_card, get_valid_token
 from tg_logs_handler import TelegramLogsHandler
 
 logger = logging.getLogger('Logger')
@@ -20,7 +20,8 @@ BUTTONS_IN_ROW = 2
 
 
 def start(update, context):
-    keyboard = generate_inline_buttons()
+    access_token, expired_at = get_valid_token(context)
+    keyboard = generate_inline_buttons(access_token)
     keyboard.append([InlineKeyboardButton('Корзина', callback_data='cart')])
     context.user_data['keyboard'] = keyboard
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -33,8 +34,9 @@ def start(update, context):
 
 
 def handle_menu(update, context):
+    access_token, expired_at = get_valid_token(context)
     if update.callback_query.data == 'cart':
-        display_card(update)
+        display_card(access_token, update)
         return 'HANDLE_CART'
     else:
         reply_markup = InlineKeyboardMarkup([
@@ -45,10 +47,10 @@ def handle_menu(update, context):
 
         product_id = update.callback_query.data
         context.user_data['product_id'] = product_id
-        product = get_product_by_id(product_id)
+        product = get_product_by_id(access_token, product_id)
         product_details = get_product_details(product)
         image_id = product['data']['relationships']['main_image']['data']['id']
-        image_url = get_product_image_url(image_id)
+        image_url = get_product_image_url(access_token, image_id)
         context.bot.send_photo(
             chat_id=update.effective_chat.id,
             photo=image_url,
@@ -63,16 +65,17 @@ def handle_menu(update, context):
 
 
 def handle_description(update, context):
+    access_token, expired_at = get_valid_token(context)
     keyboard = context.user_data['keyboard']
     reply_markup = InlineKeyboardMarkup(keyboard)
     product_id = context.user_data['product_id']
     if update.callback_query.data.isdigit():
         quantity = int(update.callback_query.data)
-        add_product_to_cart(product_id, update.effective_chat.id, quantity)
+        add_product_to_cart(access_token, product_id, update.effective_chat.id, quantity)
         update.callback_query.answer(text='Товар добавлен в корзину')
         return "HANDLE_DESCRIPTION"
     elif update.callback_query.data == 'cart':
-        display_card(update)
+        display_card(access_token, update)
         return 'HANDLE_CART'
     else:
         update.callback_query.message.reply_text(text='Вы можете выбрать товар:', reply_markup=reply_markup)
@@ -80,32 +83,34 @@ def handle_description(update, context):
 
 
 def handle_cart(update, context):
+    access_token, expired_at = get_valid_token(context)
     if update.callback_query.data == 'menu':
         keyboard = context.user_data['keyboard']
         reply_markup = InlineKeyboardMarkup(keyboard)
         update.callback_query.message.reply_text(text='Вы можете выбрать товар:', reply_markup=reply_markup)
         return "HANDLE_MENU"
     elif update.callback_query.data == 'cart':
-        display_card(update)
+        display_card(access_token, update)
         return 'HANDLE_CART'
     elif update.callback_query.data == 'pay':
         update.callback_query.message.reply_text(text='Для оформления заказа, отправьте свою почту')
         return "WAITING_EMAIL"
     else:
-        delete_cart_items(update.effective_chat.id, update.callback_query.data)
-        display_card(update)
+        delete_cart_items(access_token, update.effective_chat.id, update.callback_query.data)
+        display_card(access_token, update)
         return 'HANDLE_CART'
 
 
 def waiting_email(update, context):
+    access_token, expired_at = get_valid_token(context)
     if update.message:
         reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton('Заново', callback_data='again')]])
         try:
-            create_customer(update.message.text)
+            create_customer(access_token, update.message.text)
         except WrongEmail:
             update.message.reply_text(text='Неверная почта, попробуйте ещё раз')
             return "WAITING_EMAIL"
-        delete_cart(update.effective_chat.id)
+        delete_cart(access_token, update.effective_chat.id)
         update.message.reply_text(text=f'Вы прислали эту почту: {update.message.text}', reply_markup=reply_markup)
         return "START"
 
@@ -163,6 +168,7 @@ if __name__ == '__main__':
     logger.addHandler(TelegramLogsHandler(chat_id))
     logger.warning('TG_Fish_Bot запущен.')
     dispatcher = updater.dispatcher
+    dispatcher.bot_data['token_attrs'] = get_access_token()
     dispatcher.add_handler(CallbackQueryHandler(handle_users_reply))
     dispatcher.add_handler(MessageHandler(Filters.text, handle_users_reply))
     dispatcher.add_handler(CommandHandler('start', handle_users_reply))

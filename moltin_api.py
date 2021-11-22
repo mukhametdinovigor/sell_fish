@@ -18,11 +18,11 @@ def get_access_token():
     moltin_url = 'https://api.moltin.com/oauth/access_token'
     response = requests.post(moltin_url, data=client_credentials)
     response.raise_for_status()
-    return response.json().get('access_token')
+    expired_at = response.json()['expires']
+    return response.json().get('access_token'), expired_at
 
 
-def get_available_products():
-    access_token = get_access_token()
+def get_available_products(access_token):
     headers = {
         'Authorization': f'Bearer {access_token}',
     }
@@ -32,8 +32,7 @@ def get_available_products():
     return response.json()
 
 
-def add_product_to_cart(product_id, chat_id, quantity):
-    access_token = get_access_token()
+def add_product_to_cart(access_token, product_id, chat_id, quantity):
     headers = {
         'Authorization': f'Bearer {access_token}',
         'Content-Type': 'application/json',
@@ -48,8 +47,7 @@ def add_product_to_cart(product_id, chat_id, quantity):
     return response.json()
 
 
-def get_products_from_cart(chat_id):
-    access_token = get_access_token()
+def get_products_from_cart(access_token, chat_id):
     products_from_cart = dict()
     total_price = 0
 
@@ -72,8 +70,7 @@ def get_products_from_cart(chat_id):
     return products_from_cart
 
 
-def get_product_by_id(product_id):
-    access_token = get_access_token()
+def get_product_by_id(access_token, product_id):
     headers = {
         'Authorization': f'Bearer {access_token}',
     }
@@ -94,8 +91,7 @@ def get_product_details(product):
     return product_details
 
 
-def get_cart(chat_id):
-    access_token = get_access_token()
+def get_cart(access_token, chat_id):
     headers = {
         'Authorization': f'Bearer {access_token}',
     }
@@ -104,8 +100,7 @@ def get_cart(chat_id):
     return response.json()
 
 
-def get_product_image_url(image_id):
-    access_token = get_access_token()
+def get_product_image_url(access_token, image_id):
     headers = {
         'Authorization': f'Bearer {access_token}',
     }
@@ -114,8 +109,7 @@ def get_product_image_url(image_id):
     return response.json()['data']['link']['href']
 
 
-def delete_cart(chat_id):
-    access_token = get_access_token()
+def delete_cart(access_token, chat_id):
     headers = {
         'Authorization': f'Bearer {access_token}',
     }
@@ -124,8 +118,7 @@ def delete_cart(chat_id):
     return response.text
 
 
-def delete_cart_items(chat_id, product_id):
-    access_token = get_access_token()
+def delete_cart_items(access_token, chat_id, product_id):
     headers = {
         'Authorization': f'Bearer {access_token}',
     }
@@ -134,8 +127,7 @@ def delete_cart_items(chat_id, product_id):
     return response.text
 
 
-def create_customer(email):
-    access_token = get_access_token()
+def create_customer(access_token, email):
     headers = {
         'Authorization': f'Bearer {access_token}',
         'Content-Type': 'application/json',
